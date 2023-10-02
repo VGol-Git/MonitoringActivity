@@ -7,6 +7,10 @@
 #include <iostream>
 #include <map>
 #include <chrono>
+#include <cstdlib>
+#include <cstddef>
+#include <thread>
+#include <nlohmann/json.hpp>
 
 using namespace std::chrono;
 
@@ -18,7 +22,50 @@ struct AppInfo {
     AppInfo() : activeTime(0) {}
 };
 
+void kill(SOCKET clientSocket) {
+    closesocket(clientSocket);
+    WSACleanup();
 
+    exit(0);
+};
+void send_json(SOCKET clientSocket, std::map<std::string, AppInfo> & appInfoMap) {
+    // Сериализовать appInfoMap в JSON
+    nlohmann::json jsonData;
+    for (const auto& pair : appInfoMap) {
+        jsonData[pair.first]["name"] = pair.second.name;
+        jsonData[pair.first]["activeTime"] = pair.second.activeTime.count();
+    }
+
+    // Преобразовать JSON в строку
+    std::string jsonString = jsonData.dump();
+
+    // Отправить JSON на сервер
+    int bytesSent = send(clientSocket, jsonString.c_str(), jsonString.size(), 0);
+    if (bytesSent == SOCKET_ERROR) {
+        std::cerr << "Ошибка при отправке данных на сервер." << std::endl;
+    }
+
+}
+
+void HandleClientData(SOCKET clientSocket, std::map<std::string, AppInfo> & appInfoMap ) {
+    while (true) {
+        char key[1024];
+        byte bytesRead = recv(clientSocket, key, sizeof(key), 0);
+        if (bytesRead == -1) {
+            std::cerr << "Ошибка при приеме данных" << std::endl;
+        }
+        else {
+            key[bytesRead] = '\0'; // Добавляем завершающий нулевой символ, чтобы превратить буфер в строку C
+            if (strcmp(key, "screenshot") == 0) {
+                CaptureScreenshot(clientSocket);
+            }
+            if (strcmp(key, "json") == 0) {
+                send_json(clientSocket, appInfoMap);
+            }
+        }
+    }
+    
+}
 
 int main() {
     // Устанавливаем кодировку вывода на CP1251 (ANSI)
@@ -65,27 +112,28 @@ int main() {
         return 1;
     }
 
+    
+
+    std::thread(HandleClientData, clientSocket, std::ref(appInfoMap)).detach();
     while (true) {
-        bool key = false;
-        if (key) {
-            // Снимаем скриншот
-            CaptureScreenshot();
-        }
+        
+
         HWND hwnd = GetForegroundWindow(); // Получаем текущее активное окно
 
         if (hwnd != NULL && hwnd != prevHwnd) {
             // Получаем заголовок окна
             GetWindowTextA(hwnd, windowTitle, sizeof(windowTitle));
             std::string appName = windowTitle;
-
+            if (appName == "")
+                continue;
             // Обновляем информацию о времени активности
             high_resolution_clock::time_point currentTime = high_resolution_clock::now();
             milliseconds elapsed = duration_cast<milliseconds>(currentTime - prevTimePoint);
             appInfoMap[prevAppName].activeTime += elapsed;
-
+            appInfoMap[prevAppName].name = appName;
             // Выводим информацию о времени активности
-            std::cout << "Приложение: " << prevAppName << std::endl;
-            std::cout << "Время активности (мс): " << appInfoMap[prevAppName].activeTime.count() << std::endl;
+            std::cout << "App: " << prevAppName << std::endl;
+            std::cout << "Activity time(ms): " << appInfoMap[prevAppName].activeTime.count() << std::endl;
 
             // Обновляем предыдущее активное окно и его заголовок
             prevHwnd = hwnd;
@@ -93,15 +141,10 @@ int main() {
             prevTimePoint = currentTime;
         }
 
-        // Отправляем данные на сервер
-        // Например, можно отправить информацию о времени активности appInfoMap на сервер
 
         Sleep(1000); // Пауза в 1 секунду (1000 миллисекунд)
     }
 
     // Закрываем сокет и завершаем работу библиотеки Winsock
-    closesocket(clientSocket);
-    WSACleanup();
-
-    return 0;
+    kill(clientSocket);
 }

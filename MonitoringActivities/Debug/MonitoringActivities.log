@@ -1,5 +1,6 @@
 ﻿  MonitoringActivities.cpp
   screenshot.cpp
+D:\1\MonitoringActivities\screenshot.cpp(78,32): warning C4244: '=': conversion from 'std::streamsize' to 'int', possible loss of data
   Generating Code...
-D:\1\MonitoringActivities\screenshot.cpp(90): warning C4715: 'CaptureScreenshot': not all control paths return a value
+D:\1\MonitoringActivities\screenshot.cpp(131): warning C4715: 'CaptureScreenshot': not all control paths return a value
   MonitoringActivities.vcxproj -> D:\1\MonitoringActivities\Debug\MonitoringActivities.exe
