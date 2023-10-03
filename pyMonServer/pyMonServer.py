@@ -1,6 +1,11 @@
 import socket
 import threading
 import json
+import time
+import datetime
+
+
+
 
 # Хост и порт, на котором будет работать сервер
 HOST = '127.0.0.1'
@@ -39,16 +44,28 @@ def receive_and_save_bmp(client_socket, file_name):
             print(f"Файл '{file_name}' успешно принят и сохранен.")
     except Exception as e:
         print(f"Произошла ошибка при приеме файла: {str(e)}")
+
+
+def control_time_client(client_socket, addr):
+    try:
+        while True:
+            client_socket.send(b'')
+            time.sleep(1)
+    except (ConnectionResetError, ConnectionAbortedError):
+        print("Клиент разорвал соединение:", addr)
+    clients.pop(addr)
+    print(datetime.datetime.now())
+    client_socket.close()
         
 # Первое распараллеливание: принимаем новых клиентов
 def accept_clients(server_socket):
     while True:
         # Получаем уникальный идентификатор клиента: IP-адрес и порт
         client_socket, addr = server_socket.accept()
-        client_id = addr
         # Сохраняем соединение клиента в словаре
-        clients[client_id] = client_socket
-
+        clients[addr] = client_socket
+        client_thread = threading.Thread(target=control_time_client, args=(client_socket, addr))
+        client_thread.start()
       
 
 # Второе распараллеливание: отправляем данные клиентам
@@ -101,6 +118,7 @@ def main():
 
         accept_thread.start()
         send_thread.start()
+       
 
 
 
