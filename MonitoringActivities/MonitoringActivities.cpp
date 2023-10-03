@@ -51,9 +51,27 @@ void HandleClientData(SOCKET clientSocket, std::map<std::string, AppInfo>& appIn
     }
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    SetConsoleOutputCP(1251);
+void addToRegistry() {
+    TCHAR exePath[MAX_PATH]; DWORD pathLength = GetModuleFileName(NULL, exePath, MAX_PATH);
+    if (pathLength == 0) 
+        return; //"Ошибка при получении пути к исполняемому файлу."
 
+    HKEY hKey; // Открываем ключ для записи
+    LPCTSTR lpValueName = TEXT("MonitoringActivities"); 
+    LPCTSTR lpSubKey = TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
+    LPCTSTR lpData = exePath; 
+
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, lpSubKey, 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS)
+        if (RegSetValueEx(hKey, lpValueName, 0, REG_SZ, (LPBYTE)lpData, sizeof(TCHAR) * (lstrlen(lpData) + 1)) == ERROR_SUCCESS)
+            RegCloseKey(hKey);
+        //else std::cerr << "Ошибка при добавлении в реестр." << std::endl;
+}
+
+
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    addToRegistry();
+    SetConsoleOutputCP(1251);
     std::map<std::string, AppInfo> appInfoMap;
 
     HWND prevHwnd = GetForegroundWindow();
