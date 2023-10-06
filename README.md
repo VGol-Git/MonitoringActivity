@@ -2,14 +2,14 @@
 Client-Server application for monitoring work activity
 
 Example applications 
-https://www.teramind.co/solutions/employee-monitoring-software
-https://veriato.com/product/
+1. https://www.teramind.co/solutions/employee-monitoring-software
+2. https://veriato.com/product/
 
 Client (windows) - c/c++
-Silent launches on user logon and work in background
-Communicates with server at any protocol 
+1. Silent launches on user logon and work in background
+2. Communicates with server at any protocol 
 
 Server - desktop or web interface - any language 
-List all connected clients - domain/machine/ip/user
-Show client’s last active time
-Ability to get screenshot from client’s desktop 
+1. List all connected clients - domain/machine/ip/user
+2. Show client’s last active time
+3. Ability to get screenshot from client’s desktop 
