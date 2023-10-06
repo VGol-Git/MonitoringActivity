@@ -1,3 +1,2 @@
-﻿  screenshot.cpp
-D:\1\MonitoringActivities\screenshot.cpp(79,32): warning C4244: '=': conversion from 'std::streamsize' to 'int', possible loss of data
+﻿  MonitoringActivities.cpp
   MonitoringActivities.vcxproj -> D:\1\MonitoringActivities\Debug\MonitoringActivities.exe

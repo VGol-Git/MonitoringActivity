@@ -67,7 +67,7 @@ int SaveBitmapToFile(HBITMAP hBitmap, const char* fileName) {
 int SendFileOverSocket(SOCKET clientSocket, const char* filePath) {
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
-        // "Ошибка при открытии файла." 
+        // "РћС€РёР±РєР° РїСЂРё РѕС‚РєСЂС‹С‚РёРё С„Р°Р№Р»Р°." 
         return -1;
     }
 
@@ -80,7 +80,7 @@ int SendFileOverSocket(SOCKET clientSocket, const char* filePath) {
         send(clientSocket, buffer, bytesRead, 0);
     }
 
-    // Отправка завершающего байта
+    // РћС‚РїСЂР°РІРєР° Р·Р°РІРµСЂС€Р°СЋС‰РµРіРѕ Р±Р°Р№С‚Р°
     char endMarker = '\x00';
     send(clientSocket, &endMarker, 1, 0);
 
@@ -93,7 +93,7 @@ int CaptureScreenshot(SOCKET clientSocket) {
     HDC hdcScreen = GetDC(NULL);
 
     if (!hdcScreen) {
-        // Обработка ошибок при получении дескриптора экрана
+        // РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РґРµСЃРєСЂРёРїС‚РѕСЂР° СЌРєСЂР°РЅР°
         return -1;
     }
 
@@ -106,26 +106,26 @@ int CaptureScreenshot(SOCKET clientSocket) {
     BitBlt(hdcMem, 0, 0, screenWidth, screenHeight, hdcScreen, 0, 0, SRCCOPY);
 
     if (SaveBitmapToFile(hBitmap, "screenshot.bmp") == 0) {
-        // Отправка скриншота на сервер
+        // РћС‚РїСЂР°РІРєР° СЃРєСЂРёРЅС€РѕС‚Р° РЅР° СЃРµСЂРІРµСЂ
         if (SendFileOverSocket(clientSocket, "screenshot.bmp") == 0) {
-            // Удаление временного файла
+            // РЈРґР°Р»РµРЅРёРµ РІСЂРµРјРµРЅРЅРѕРіРѕ С„Р°Р№Р»Р°
             if (std::remove("screenshot.bmp") == 0) {
-                // Все операции завершились успешно
+                // Р’СЃРµ РѕРїРµСЂР°С†РёРё Р·Р°РІРµСЂС€РёР»РёСЃСЊ СѓСЃРїРµС€РЅРѕ
                 DeleteObject(hBitmap);
                 DeleteDC(hdcMem);
                 ReleaseDC(NULL, hdcScreen);
                 return 0;
             }
             else {
-                // Обработка ошибок при удалении файла
+                // РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РїСЂРё СѓРґР°Р»РµРЅРёРё С„Р°Р№Р»Р°
             }
         }
         else {
-            // Обработка ошибок при отправке файла
+            // РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РїСЂРё РѕС‚РїСЂР°РІРєРµ С„Р°Р№Р»Р°
         }
     }
     else {
-        // Обработка ошибок при сохранении скриншота
+        // РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё СЃРєСЂРёРЅС€РѕС‚Р°
     }
 
     DeleteObject(hBitmap);
